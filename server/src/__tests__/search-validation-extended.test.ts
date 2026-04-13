@@ -798,24 +798,23 @@ describe('Search — Extended', () => {
 
   /* ---------- Pagination ---------- */
 
-  it('32. pagination: limit 2 returns 2 items and a cursor', async () => {
+  it('32. pagination: limit 2 offset 0 returns 2 items and a total', async () => {
     const res = await inject(app, adminCookies, {
       method: 'POST',
       url: searchUrl(),
-      payload: { limit: 2 },
+      payload: { limit: 2, offset: 0 },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.items.length).toBe(2);
     expect(body.total).toBeGreaterThanOrEqual(5);
-    expect(body.nextCursor).toBeDefined();
   });
 
-  it('33. pagination: second page via cursor has no duplicates', async () => {
+  it('33. pagination: offset 2 returns disjoint ids from offset 0 with matching total', async () => {
     const firstRes = await inject(app, adminCookies, {
       method: 'POST',
       url: searchUrl(),
-      payload: { limit: 2 },
+      payload: { limit: 2, offset: 0 },
     });
     expect(firstRes.statusCode).toBe(200);
     const firstBody = firstRes.json();
@@ -824,7 +823,7 @@ describe('Search — Extended', () => {
     const secondRes = await inject(app, adminCookies, {
       method: 'POST',
       url: searchUrl(),
-      payload: { limit: 2, cursor: firstBody.nextCursor },
+      payload: { limit: 2, offset: 2 },
     });
     expect(secondRes.statusCode).toBe(200);
     const secondBody = secondRes.json();
@@ -834,6 +833,9 @@ describe('Search — Extended', () => {
     for (const id of secondIds) {
       expect(firstIds).not.toContain(id);
     }
+
+    // Total is stable across pages
+    expect(secondBody.total).toBe(firstBody.total);
   });
 
   it('34. empty search returns all words with total >= 5', async () => {

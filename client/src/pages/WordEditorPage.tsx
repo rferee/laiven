@@ -67,6 +67,7 @@ import {
   validateWordLive,
   type WordValidationResponse as LiveValidationResult,
 } from '@/api/words-validate';
+import LoadErrorAlert from '@/components/LoadErrorAlert';
 
 function formatTimestamp(ts: string): string {
   return new Date(ts).toLocaleString();
@@ -1457,21 +1458,21 @@ export default function WordEditorPage() {
 
   if (!isNew && wordError) {
     return (
-      <Alert
-        color="red"
-        icon={<IconAlertCircle size={16} />}
-        title="Error loading word"
-      >
-        Failed to load the word. It may have been deleted.
+      <Stack gap="sm">
+        <LoadErrorAlert
+          title="Error loading word"
+          error={wordError}
+          fallback="Failed to load the word. It may have been deleted."
+        />
         <Button
           variant="light"
           size="xs"
-          mt="sm"
           onClick={() => navigate(`/projects/${projectId}/words`)}
+          style={{ alignSelf: 'flex-start' }}
         >
           Back to Words
         </Button>
-      </Alert>
+      </Stack>
     );
   }
 

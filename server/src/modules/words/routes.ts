@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, isNull, desc, asc } from 'drizzle-orm';
+import { eq, and, isNull, desc, asc, sql } from 'drizzle-orm';
 import { db } from '../../db/connection.js';
 import {
   words, wordAttributeValues, wordRelations, wordDerivatives,
@@ -18,20 +18,27 @@ export async function wordRoutes(app: FastifyInstance) {
     preHandler: [await requireProjectAccess('viewer')],
   }, async (request) => {
     const { projectId } = request.params as { projectId: string };
-    const { cursor, limit: limitStr, sort, order } = request.query as {
-      cursor?: string; limit?: string; sort?: string; order?: string;
+    const { offset: offsetStr, limit: limitStr, sort, order } = request.query as {
+      offset?: string; limit?: string; sort?: string; order?: string;
     };
-    const limit = Math.min(parseInt(limitStr || '50'), 100);
+    const limit = Math.min(Math.max(parseInt(limitStr || '50') || 50, 1), 100);
+    const offset = Math.min(Math.max(parseInt(offsetStr || '0') || 0, 0), 100000);
 
-    let query = db.select()
-      .from(words)
-      .where(and(eq(words.projectId, projectId), isNull(words.deletedAt)))
-      .limit(limit + 1)
-      .orderBy(order === 'asc' ? asc(words.createdAt) : desc(words.createdAt));
+    const whereClause = and(eq(words.projectId, projectId), isNull(words.deletedAt));
 
-    const results = await query;
-    const hasMore = results.length > limit;
-    const items = hasMore ? results.slice(0, limit) : results;
+    const [results, totalRows] = await Promise.all([
+      db.select()
+        .from(words)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(order === 'asc' ? asc(words.createdAt) : desc(words.createdAt)),
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(words)
+        .where(whereClause),
+    ]);
+
+    const total = Number(totalRows[0]?.count ?? 0);
 
     // Shared attribute map avoids a per-word re-query inside
     // getWordAttributeValues when enriching many words at once.
@@ -39,7 +46,7 @@ export async function wordRoutes(app: FastifyInstance) {
       .where(and(eq(attributes.projectId, projectId), isNull(attributes.deletedAt)));
     const attributeMap: Map<string, Attribute> = new Map(projectAttrs.map(a => [a.id, a]));
 
-    const enrichedItems = await Promise.all(items.map(async (word) => {
+    const enrichedItems = await Promise.all(results.map(async (word) => {
       const attrValues = await getWordAttributeValues(word.id, attributeMap);
       const derivatives = await getWordDerivativesResponse(word.id);
       return { ...word, attributeValues: attrValues, derivatives };
@@ -47,7 +54,7 @@ export async function wordRoutes(app: FastifyInstance) {
 
     return {
       items: enrichedItems,
-      nextCursor: hasMore ? items[items.length - 1]?.id : null,
+      total,
     };
   });
 

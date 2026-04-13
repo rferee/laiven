@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
   Text,
   Card,
-  Skeleton,
   Alert,
   Tooltip,
   ActionIcon,
@@ -41,6 +39,9 @@ import {
 import { createRule, type CreateRuleData } from '@/api/rules';
 import RulePickerModal from '@/components/RulePickerModal';
 import SortableList from '@/components/SortableList';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
 
 interface CreateFormValues {
   name: string;
@@ -205,42 +206,30 @@ export default function WordRulesPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconAbc size={28} stroke={1.5} />
-          <Stack gap={0}>
-            <Title order={2}>Word Rules</Title>
-            <Text size="sm" c="dimmed">
-              Rules that validate every word in this project.
-            </Text>
-          </Stack>
-        </Group>
-        <Button leftSection={<IconPlus size={16} />} onClick={openPicker}>
-          Add word rule
-        </Button>
-      </Group>
+      <PageHeader
+        icon={<IconAbc size={28} stroke={1.5} />}
+        title="Word Rules"
+        description="Rules that validate every word in this project."
+        actions={
+          <Button leftSection={<IconPlus size={16} />} onClick={openPicker}>
+            Add word rule
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <Stack gap={6}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={40} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={40} />
       ) : links.length === 0 ? (
-        <Card withBorder p="xl" radius="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconAbc size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              No word rules configured
-            </Text>
-            <Text c="dimmed" size="sm" ta="center" maw={420}>
-              Add rules from the library to validate every word in this project.
-            </Text>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openPicker} mt="sm">
-              Add a word rule
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconAbc size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="No word rules configured"
+          description="Add rules from the library to validate every word in this project."
+          action={{
+            label: 'Add a word rule',
+            icon: <IconPlus size={16} />,
+            onClick: openPicker,
+          }}
+        />
       ) : (
         <Stack gap={6}>
           <SortableList

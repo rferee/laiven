@@ -41,6 +41,8 @@ import {
 } from '@/api/projects';
 import { getUsers, type UserRecord } from '@/api/users';
 import { useAuth } from '@/hooks/useAuth';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
 
 const ROLE_OPTIONS = [
   { value: 'project_admin', label: 'Project Admin' },
@@ -289,15 +291,18 @@ export default function ProjectSettingsPage() {
   const availableUsers = allUsers.filter((u: UserRecord) => !existingMemberIds.has(u.id));
   const isAdmin = user?.role === 'instance_admin';
 
+  const header = (
+    <PageHeader
+      icon={<IconSettings size={28} stroke={1.5} />}
+      title="Project Settings"
+      description="Manage project details, collaborators, and destructive actions."
+    />
+  );
+
   if (projectLoading) {
     return (
       <Stack gap="lg">
-        <Group justify="space-between" align="center">
-          <Group gap="sm">
-            <IconSettings size={28} stroke={1.5} />
-            <Title order={2}>Project Settings</Title>
-          </Group>
-        </Group>
+        {header}
         <Stack gap="sm">
           <Skeleton height={200} radius="md" />
           <Skeleton height={160} radius="md" />
@@ -309,12 +314,7 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <Stack gap="lg">
-        <Group justify="space-between" align="center">
-          <Group gap="sm">
-            <IconSettings size={28} stroke={1.5} />
-            <Title order={2}>Project Settings</Title>
-          </Group>
-        </Group>
+        {header}
         <Card withBorder radius="md" padding="md">
           <Text c="dimmed" ta="center" py="lg">
             Project not found.
@@ -326,15 +326,7 @@ export default function ProjectSettingsPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconSettings size={28} stroke={1.5} />
-          <Title order={2}>Project Settings</Title>
-        </Group>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Manage project details, collaborators, and destructive actions.
-      </Text>
+      {header}
 
       {/* General Settings */}
       <Card withBorder radius="md" padding="md">
@@ -382,11 +374,7 @@ export default function ProjectSettingsPage() {
           </Group>
 
           {membersLoading ? (
-            <Stack gap="sm">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} height={44} radius="md" />
-              ))}
-            </Stack>
+            <SkeletonList height={44} />
           ) : members.length === 0 ? (
             <Text c="dimmed" size="sm" ta="center" py="md">
               No members yet. Add someone to collaborate on this project.

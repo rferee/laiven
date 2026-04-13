@@ -18,7 +18,7 @@ interface SearchQuery {
   text?: string;
   conditions?: SearchCondition;
   sort?: { field: string; order: 'asc' | 'desc' };
-  cursor?: string;
+  offset?: number;
   limit?: number;
 }
 
@@ -31,7 +31,8 @@ export async function searchRoutes(app: FastifyInstance) {
   }, async (request) => {
     const { projectId } = request.params as { projectId: string };
     const query = request.body as SearchQuery;
-    const limit = Math.min(query.limit || 50, 100);
+    const limit = Math.min(Math.max(query.limit || 50, 1), 100);
+    const offset = Math.min(Math.max(query.offset ?? 0, 0), 100000);
 
     // Try cache first
     const cacheKey = `search:${projectId}:${JSON.stringify(query)}`;
@@ -53,7 +54,7 @@ export async function searchRoutes(app: FastifyInstance) {
     // Load all attribute values in bulk
     const wordIds = allWords.map(w => w.id);
     if (wordIds.length === 0) {
-      return { items: [], nextCursor: null };
+      return { items: [], total: 0 };
     }
 
     // Batch-load all data in 4 queries instead of N+1 per word
@@ -178,19 +179,11 @@ export async function searchRoutes(app: FastifyInstance) {
       });
     }
 
-    // Pagination
-    let startIdx = 0;
-    if (query.cursor) {
-      const cursorIdx = filtered.findIndex(w => w.id === query.cursor);
-      if (cursorIdx >= 0) startIdx = cursorIdx + 1;
-    }
-
-    const pageItems = filtered.slice(startIdx, startIdx + limit);
-    const hasMore = startIdx + limit < filtered.length;
+    // Pagination — offset-based
+    const pageItems = filtered.slice(offset, offset + limit);
 
     const result = {
       items: pageItems,
-      nextCursor: hasMore ? pageItems[pageItems.length - 1]?.id : null,
       total: filtered.length,
     };
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stack, Text, TextInput, Button, Group, Paper, Badge, ScrollArea, Divider, Code, Alert } from '@mantine/core';
+import { Stack, Text, TextInput, Button, Group, Paper, Badge, Divider, Code, Alert } from '@mantine/core';
 import { IconPlayerPlay, IconCheck, IconX } from '@tabler/icons-react';
 import type { TraceStep, EditorMode } from './types';
 
@@ -62,20 +62,18 @@ export function TestPanel({ mode, attributes, onRun, onTraceUpdate }: TestPanelP
 
       <Divider label="Sample Values" labelPosition="center" />
 
-      <ScrollArea style={{ maxHeight: 200 }}>
-        <Stack gap={4}>
-          {attributes.map(attr => (
-            <TextInput
-              key={attr.identifier}
-              label={attr.name}
-              size="xs"
-              value={values[attr.identifier] ?? ''}
-              onChange={(e) => setValues(prev => ({ ...prev, [attr.identifier]: e.target.value }))}
-              placeholder={`Enter ${attr.type} value...`}
-            />
-          ))}
-        </Stack>
-      </ScrollArea>
+      <Stack gap={4}>
+        {attributes.map(attr => (
+          <TextInput
+            key={attr.identifier}
+            label={attr.name}
+            size="xs"
+            value={values[attr.identifier] ?? ''}
+            onChange={(e) => setValues(prev => ({ ...prev, [attr.identifier]: e.target.value }))}
+            placeholder={`Enter ${attr.type} value...`}
+          />
+        ))}
+      </Stack>
 
       {result && (
         <>
@@ -100,34 +98,32 @@ export function TestPanel({ mode, attributes, onRun, onTraceUpdate }: TestPanelP
 
           <Divider label="Trace" labelPosition="center" />
 
-          <ScrollArea style={{ maxHeight: 300 }}>
-            <Stack gap={4}>
-              {result.trace.map((step, i) => (
-                <Paper key={i} p="xs" withBorder style={{
-                  borderLeft: `3px solid ${
-                    step.status === 'success' ? '#40c057' :
-                    step.status === 'error' ? '#fa5252' : '#868e96'
-                  }`,
-                }}>
-                  <Group gap={4} justify="space-between">
-                    <Text size="xs" fw={500}>{step.nodeType}</Text>
-                    <Badge size="xs" color={
-                      step.status === 'success' ? 'green' :
-                      step.status === 'error' ? 'red' : 'gray'
-                    }>{step.status}</Badge>
-                  </Group>
-                  {step.status === 'success' && step.outputs.output !== undefined && (
-                    <Text size="xs" c="dimmed" truncate>
-                      → {formatValue(step.outputs.output)}
-                    </Text>
-                  )}
-                  {step.error && (
-                    <Text size="xs" c="red">{step.error}</Text>
-                  )}
-                </Paper>
-              ))}
-            </Stack>
-          </ScrollArea>
+          <Stack gap={4}>
+            {result.trace.map((step, i) => (
+              <Paper key={i} p="xs" withBorder style={{
+                borderLeft: `3px solid ${
+                  step.status === 'success' ? '#40c057' :
+                  step.status === 'error' ? '#fa5252' : '#868e96'
+                }`,
+              }}>
+                <Group gap={4} justify="space-between">
+                  <Text size="xs" fw={500}>{step.nodeType}</Text>
+                  <Badge size="xs" color={
+                    step.status === 'success' ? 'green' :
+                    step.status === 'error' ? 'red' : 'gray'
+                  }>{step.status}</Badge>
+                </Group>
+                {step.status === 'success' && step.outputs.output !== undefined && (
+                  <Text size="xs" c="dimmed" truncate>
+                    → {formatValue(step.outputs.output)}
+                  </Text>
+                )}
+                {step.error && (
+                  <Text size="xs" c="red">{step.error}</Text>
+                )}
+              </Paper>
+            ))}
+          </Stack>
         </>
       )}
     </Stack>

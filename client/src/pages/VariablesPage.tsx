@@ -1,23 +1,17 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
   Text,
-  Badge,
-  Card,
   TextInput,
   NumberInput,
   Textarea,
   Select,
   Modal,
   ActionIcon,
-  Skeleton,
   Alert,
-  Collapse,
-  Tooltip,
   CloseButton,
   Box,
   SegmentedControl,
@@ -28,14 +22,16 @@ import { useDisclosure } from '@mantine/hooks';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   IconPlus,
-  IconTrash,
-  IconChevronDown,
-  IconChevronRight,
   IconAlertCircle,
   IconDatabase,
   IconGripVertical,
 } from '@tabler/icons-react';
 import SortableList from '@/components/SortableList';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import ExpandableCrudRow from '@/components/ExpandableCrudRow';
 import {
   getVariables,
   createVariable,
@@ -443,92 +439,54 @@ export default function VariablesPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconDatabase size={28} stroke={1.5} />
-          <Title order={2}>Variables</Title>
-        </Group>
-        <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Add Variable
-        </Button>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Reusable constants and value lists referenced by rules and builders.
-      </Text>
+      <PageHeader
+        icon={<IconDatabase size={28} stroke={1.5} />}
+        title="Variables"
+        description="Reusable constants and value lists referenced by rules and builders."
+        actions={
+          <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            Add Variable
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={72} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={72} />
       ) : variables.length === 0 ? (
-        <Card withBorder radius="md" padding="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconDatabase size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              No variables defined yet
-            </Text>
-            <Text c="dimmed" size="sm">
-              Variables are reusable constants and value lists referenced by rules and builders.
-            </Text>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-              Create your first variable
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconDatabase size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="No variables defined yet"
+          description="Variables are reusable constants and value lists referenced by rules and builders."
+          action={{
+            label: 'Create your first variable',
+            icon: <IconPlus size={16} />,
+            onClick: openCreate,
+          }}
+        />
       ) : (
         <Stack gap="xs">
           {variables.map((v) => (
-            <Card
+            <ExpandableCrudRow
               key={v.id}
-              withBorder
-              radius="md"
-              padding="sm"
-              style={{ cursor: 'pointer' }}
-              onClick={() => handleExpand(v)}
-            >
-              <Group justify="space-between" wrap="nowrap">
-                <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-                  {expandedId === v.id ? (
-                    <IconChevronDown size={16} color="var(--mantine-color-dimmed)" />
-                  ) : (
-                    <IconChevronRight size={16} color="var(--mantine-color-dimmed)" />
-                  )}
-                  <Text fw={500} truncate style={{ minWidth: 0 }}>
-                    {v.name}
-                  </Text>
-                  <Badge size="sm" variant="light" color="gray">
-                    {v.kind === 'constant' ? 'Constant' : 'Array'}
-                  </Badge>
-                  <Badge size="sm" variant="light" color={TYPE_COLORS[v.dataType] ?? 'gray'}>
-                    {v.dataType}
-                  </Badge>
-                  <Text c="dimmed" size="xs">
-                    {v.items.length} item{v.items.length !== 1 ? 's' : ''}
-                  </Text>
-                </Group>
-                <Group gap={4} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
-                  <Tooltip label="Delete" events={{ hover: true, focus: false, touch: false }}>
-                    <ActionIcon
-                      variant="subtle"
-                      size="sm"
-                      color="red"
-                      onClick={(e) => {
-                        e.currentTarget.blur();
-                        setDeleteTarget(v);
-                      }}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              </Group>
-
-              <Collapse in={expandedId === v.id}>
+              title={v.name}
+              badges={[
+                { label: v.kind === 'constant' ? 'Constant' : 'Array', color: 'gray' },
+                { label: v.dataType, color: TYPE_COLORS[v.dataType] ?? 'gray' },
+              ]}
+              meta={
+                <Text c="dimmed" size="xs">
+                  {v.items.length} item{v.items.length !== 1 ? 's' : ''}
+                </Text>
+              }
+              expanded={expandedId === v.id}
+              onToggle={() => handleExpand(v)}
+              onDelete={() => setDeleteTarget(v)}
+              deleteAriaLabel="Delete variable"
+              expandedContent={
                 <form
                   onSubmit={editForm.onSubmit((values) => handleEdit(v.id, values))}
-                  style={{ marginTop: 12 }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   <Stack gap="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
                     <TextInput
@@ -588,8 +546,8 @@ export default function VariablesPage() {
                     )}
                   </Stack>
                 </form>
-              </Collapse>
-            </Card>
+              }
+            />
           ))}
         </Stack>
       )}
@@ -678,42 +636,18 @@ export default function VariablesPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        opened={!!deleteTarget}
+      <DeleteConfirmModal
+        target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete Variable"
-        size="sm"
-      >
-        <Stack gap="md">
-          <Text>
-            Are you sure you want to delete{' '}
-            <Text span fw={600}>
-              {deleteTarget?.name}
-            </Text>
-            ?
-          </Text>
-          <Alert color="sunset" variant="light" icon={<IconAlertCircle size={16} />}>
+        entityLabel="Variable"
+        warning={
+          <Text size="sm">
             This may affect rules and builders that reference this variable.
-          </Alert>
-          {deleteMutation.isError && (
-            <Alert color="red" variant="light">
-              {(deleteMutation.error as Error).message}
-            </Alert>
-          )}
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+          </Text>
+        }
+        mutation={deleteMutation}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Stack>
   );
 }

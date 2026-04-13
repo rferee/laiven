@@ -1,6 +1,6 @@
-import { Fragment, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { Fragment, useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Box,
   Button,
@@ -8,22 +8,19 @@ import {
   Checkbox,
   Group,
   Loader,
-  Skeleton,
-  Paper,
+  Pagination,
+  Select,
   Stack,
   Table,
   Text,
   TextInput,
-  Title,
   Collapse,
   Popover,
   UnstyledButton,
   Badge,
   Center,
-  Alert,
   Tooltip,
   ActionIcon,
-  Transition,
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -38,7 +35,6 @@ import {
   IconChevronUp,
   IconChevronDown,
   IconCheck,
-  IconAlertCircle,
   IconChevronRight,
 } from '@tabler/icons-react';
 import { getAttributes, type Attribute } from '@/api/attributes';
@@ -55,6 +51,11 @@ import AdvancedSearchBuilder, {
   createEmptyGroup,
   buildSearchConditions,
 } from '@/components/AdvancedSearchBuilder';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import LoadErrorAlert from '@/components/LoadErrorAlert';
+import BulkSelectionToolbar from '@/components/BulkSelectionToolbar';
 
 interface SortState {
   field: string;
@@ -73,9 +74,8 @@ export default function WordSearchPage() {
 
   const [sort, setSort] = useState<SortState | null>(null);
 
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [allItems, setAllItems] = useState<WordListItem[]>([]);
-  const isInitialLoadRef = useRef(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -88,6 +88,7 @@ export default function WordSearchPage() {
     data: attributesData,
     isLoading: attributesLoading,
     error: attributesError,
+    refetch: refetchAttributes,
   } = useQuery({
     queryKey: ['attributes', projectId],
     queryFn: () => getAttributes(projectId!),
@@ -108,7 +109,8 @@ export default function WordSearchPage() {
 
   const searchQueryPayload = useMemo((): SearchQuery => {
     const query: SearchQuery = {
-      limit: 50,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     };
 
     if (debouncedSearch.trim()) {
@@ -127,12 +129,8 @@ export default function WordSearchPage() {
       query.sort = { field: sort.field, order: sort.order };
     }
 
-    if (cursor) {
-      query.cursor = cursor;
-    }
-
     return query;
-  }, [debouncedSearch, advancedOpen, advancedQuery, attributes, sort, cursor]);
+  }, [debouncedSearch, advancedOpen, advancedQuery, attributes, sort, page, pageSize]);
 
   const {
     data: searchData,
@@ -143,6 +141,7 @@ export default function WordSearchPage() {
     queryKey: ['words-search', projectId, searchQueryPayload],
     queryFn: () => searchWords(projectId!, searchQueryPayload),
     enabled: !!projectId && isSearchActive,
+    placeholderData: keepPreviousData,
   });
 
   const {
@@ -156,16 +155,18 @@ export default function WordSearchPage() {
       projectId,
       sort?.field,
       sort?.order,
-      cursor,
+      page,
+      pageSize,
     ],
     queryFn: () =>
       getWords(projectId!, {
-        cursor,
-        limit: 50,
+        offset: (page - 1) * pageSize,
+        limit: pageSize,
         sort: sort?.field,
         order: sort?.order,
       }),
     enabled: !!projectId && !isSearchActive,
+    placeholderData: keepPreviousData,
   });
 
   const activeData = isSearchActive ? searchData : listData;
@@ -173,48 +174,24 @@ export default function WordSearchPage() {
   const isFetching = isSearchActive ? searchFetching : listFetching;
   const error = isSearchActive ? searchError : listError;
 
-  // Accumulate items for "load more" pagination.
-  // On re-mount with cached data the effect may run a tick after the initial
-  // render, leaving `allItems` empty and flashing an empty state. Fall back to
-  // `activeData.items` directly whenever the local accumulator is empty.
-  useEffect(() => {
-    if (activeData?.items) {
-      if (isInitialLoadRef.current || !cursor) {
-        setAllItems(activeData.items);
-        isInitialLoadRef.current = false;
-      } else {
-        setAllItems((prev) => {
-          const existingIds = new Set(prev.map((i) => i.id));
-          const newItems = activeData.items.filter((i) => !existingIds.has(i.id));
-          return [...prev, ...newItems];
-        });
-      }
-    }
-  }, [activeData, cursor]);
+  const displayedItems = activeData?.items ?? [];
+  const totalItems = activeData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
-  // Items actually rendered. Prefer the accumulated list; fall back to the
-  // fresh server data when the accumulator hasn't been populated yet (e.g.
-  // right after navigation/re-mount with a warm cache — the root cause of
-  // the Safari "no words" intermittent bug).
-  const displayedItems = useMemo(() => {
-    if (allItems.length > 0) return allItems;
-    return activeData?.items ?? [];
-  }, [allItems, activeData?.items]);
-
+  // Reset page (and selection) when filters or sort change.
   useEffect(() => {
-    setCursor(undefined);
-    setAllItems([]);
-    isInitialLoadRef.current = true;
+    setPage(1);
     setSelectedIds(new Set());
   }, [debouncedSearch, advancedOpen, advancedQuery, sort]);
 
-  const hasMore = !!activeData?.nextCursor;
-
-  const handleLoadMore = () => {
-    if (activeData?.nextCursor) {
-      setCursor(activeData.nextCursor);
+  // If the current page index is now past the last page (e.g. after deletes
+  // shrunk the total), step back to a valid page. keepPreviousData prevents
+  // an empty flash while the new query resolves.
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
     }
-  };
+  }, [page, totalPages]);
 
   const deleteMutation = useMutation({
     mutationFn: (wordId: string) => deleteWord(projectId!, wordId),
@@ -348,9 +325,12 @@ export default function WordSearchPage() {
 
   if (attributesError) {
     return (
-      <Alert color="red" icon={<IconAlertCircle size={16} />} title="Error loading attributes">
-        Failed to load project attributes. Please try again.
-      </Alert>
+      <LoadErrorAlert
+        title="Error loading attributes"
+        error={attributesError}
+        fallback="Failed to load project attributes. Please try again."
+        onRetry={() => refetchAttributes()}
+      />
     );
   }
 
@@ -359,27 +339,28 @@ export default function WordSearchPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconSearch size={28} stroke={1.5} />
-          <Title order={2}>Words</Title>
-        </Group>
-        <Button
-          size="sm"
-          leftSection={<IconPlus size={16} />}
-          onClick={handleNewWord}
-        >
-          New Word
-        </Button>
-      </Group>
+      <PageHeader
+        icon={<IconSearch size={28} stroke={1.5} />}
+        title="Words"
+        description="Search, filter, and manage words in this project."
+        actions={
+          <Button
+            size="sm"
+            leftSection={<IconPlus size={16} />}
+            onClick={handleNewWord}
+          >
+            New Word
+          </Button>
+        }
+      />
 
-      <Group gap="sm" align="flex-end">
+      <Group gap="sm" align="flex-end" wrap="wrap">
         <TextInput
           placeholder="Search words..."
           leftSection={<IconSearch size={16} />}
           value={searchText}
           onChange={(e) => setSearchText(e.currentTarget.value)}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 200 }}
           rightSection={
             isFetching ? <Loader size="xs" /> : null
           }
@@ -392,6 +373,24 @@ export default function WordSearchPage() {
         >
           {advancedOpen ? 'Hide Filters' : 'Advanced Search'}
         </Button>
+        <Select
+          label="Per page"
+          data={['25', '50', '100', '250', '500']}
+          value={String(pageSize)}
+          onChange={(v) => {
+            if (v === null) return;
+            setPageSize(Number(v));
+            setPage(1);
+          }}
+          w={110}
+          allowDeselect={false}
+        />
+        <Pagination
+          total={totalPages}
+          value={page}
+          onChange={setPage}
+          size="sm"
+        />
         <Popover
           opened={columnPopoverOpen}
           onChange={setColumnPopoverOpen}
@@ -436,63 +435,44 @@ export default function WordSearchPage() {
         </Box>
       </Collapse>
 
-      <Transition mounted={selectedIds.size > 0} transition="slide-down" duration={200}>
-        {(styles) => (
-          <Paper style={styles} p="xs" withBorder radius="sm">
-            <Group gap="sm" justify="space-between">
-              <Text size="sm" c="dimmed">
-                {selectedIds.size} word{selectedIds.size !== 1 ? 's' : ''} selected
-              </Text>
-              <Button
-                variant="light"
-                color="red"
-                size="xs"
-                leftSection={<IconTrash size={14} />}
-                onClick={handleBulkDelete}
-                loading={deleteMutation.isPending}
-              >
-                Delete Selected
-              </Button>
-            </Group>
-          </Paper>
-        )}
-      </Transition>
+      <BulkSelectionToolbar
+        count={selectedIds.size}
+        noun="word"
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            label: 'Delete Selected',
+            color: 'red',
+            icon: <IconTrash size={14} />,
+            onClick: handleBulkDelete,
+            loading: deleteMutation.isPending,
+          },
+        ]}
+      />
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={52} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={52} />
       ) : error ? (
-        <Alert color="red" icon={<IconAlertCircle size={16} />} title="Error">
-          Failed to load words. Please try again.
-        </Alert>
+        <LoadErrorAlert title="Error" error={error} fallback="Failed to load words. Please try again." />
       ) : displayedItems.length === 0 ? (
-        <Card withBorder radius="md" padding="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconSearch size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              {debouncedSearch.trim() || advancedOpen
-                ? 'No words match your search'
-                : 'No words yet'}
-            </Text>
-            {!debouncedSearch.trim() && !advancedOpen && (
-              <>
-                <Text c="dimmed" size="sm">
-                  Create your first word to start building your language.
-                </Text>
-                <Button
-                  variant="light"
-                  leftSection={<IconPlus size={16} />}
-                  onClick={handleNewWord}
-                >
-                  Create your first word
-                </Button>
-              </>
-            )}
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconSearch size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title={debouncedSearch.trim() || advancedOpen ? 'No words match your search' : 'No words yet'}
+          description={
+            !debouncedSearch.trim() && !advancedOpen
+              ? 'Create your first word to start building your language.'
+              : undefined
+          }
+          action={
+            !debouncedSearch.trim() && !advancedOpen
+              ? {
+                  label: 'Create your first word',
+                  icon: <IconPlus size={16} />,
+                  onClick: handleNewWord,
+                }
+              : undefined
+          }
+        />
       ) : (
         <>
           <Card withBorder radius="md" p={0} style={{ overflow: 'auto' }}>
@@ -634,20 +614,16 @@ export default function WordSearchPage() {
             </Table>
           </Card>
 
-          <Group justify="center" py="sm">
-            {hasMore ? (
-              <Button
-                variant="light"
-                onClick={handleLoadMore}
-                loading={isFetching && !!cursor}
-              >
-                Load More
-              </Button>
-            ) : (
-              <Text size="sm" c="dimmed">
-                {displayedItems.length} word{displayedItems.length !== 1 ? 's' : ''} total
-              </Text>
-            )}
+          <Group justify="center" py="sm" gap="sm">
+            <Pagination
+              total={totalPages}
+              value={page}
+              onChange={setPage}
+              size="sm"
+            />
+            <Text size="sm" c="dimmed">
+              {totalItems} word{totalItems !== 1 ? 's' : ''} total
+            </Text>
           </Group>
         </>
       )}

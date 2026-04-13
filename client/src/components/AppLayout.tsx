@@ -3,13 +3,8 @@ import { Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   AppShell,
-  Group,
   Text,
-  Title,
   NavLink,
-  UnstyledButton,
-  Menu,
-  Avatar,
   Divider,
   Breadcrumbs,
   Anchor,
@@ -17,19 +12,12 @@ import {
   Center,
   Box,
   Collapse,
-  Flex,
   Burger,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconSearch,
   IconSettings,
-  IconChevronDown,
-  IconUser,
-  IconUsers,
-  IconLogout,
-  IconLayoutDashboard,
-  IconLanguage,
   IconAdjustments,
   IconList,
   IconBinaryTree2,
@@ -40,8 +28,7 @@ import {
   IconBooks,
 } from '@tabler/icons-react';
 import { getProject } from '@/api/projects';
-import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@/hooks/useLogout';
+import TopBar from '@/components/TopBar';
 
 interface NavItem {
   label: string;
@@ -66,7 +53,6 @@ export default function AppLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const [configOpen, setConfigOpen] = useState(true);
   const [rulesOpen, setRulesOpen] = useState(true);
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
@@ -77,8 +63,6 @@ export default function AppLayout() {
     queryFn: () => getProject(projectId!),
     enabled: !!projectId,
   });
-
-  const logoutMutation = useLogout();
 
   const basePath = `/projects/${projectId}`;
 
@@ -174,36 +158,25 @@ export default function AppLayout() {
     >
       {/* Header */}
       <AppShell.Header>
-        <Flex h="100%" px="md" align="center" justify="space-between">
-          <Group gap="sm">
-            <Burger
-              opened={mobileOpened}
-              onClick={toggleMobile}
-              hiddenFrom="sm"
-              size="sm"
-            />
-            <Burger
-              opened={desktopOpened}
-              onClick={toggleDesktop}
-              visibleFrom="sm"
-              size="sm"
-            />
-            <UnstyledButton onClick={() => navigate('/')}>
-              <Group gap={6} align="baseline">
-                <IconLanguage
-                  size={24}
-                  stroke={1.5}
-                  color="var(--mantine-color-atlantis-5)"
-                />
-                <Title order={4} fw={700} visibleFrom="sm">
-                  Laiven
-                </Title>
-                <Text size="xs" c="dimmed" visibleFrom="sm">
-                  v{__APP_VERSION__}
-                </Text>
-              </Group>
-            </UnstyledButton>
-            <Divider orientation="vertical" mx={4} />
+        <TopBar
+          variant="appshell"
+          leading={
+            <>
+              <Burger
+                opened={mobileOpened}
+                onClick={toggleMobile}
+                hiddenFrom="sm"
+                size="sm"
+              />
+              <Burger
+                opened={desktopOpened}
+                onClick={toggleDesktop}
+                visibleFrom="sm"
+                size="sm"
+              />
+            </>
+          }
+          breadcrumbs={
             <Breadcrumbs
               separatorMargin={6}
               style={{ flexWrap: 'nowrap', overflow: 'hidden' }}
@@ -228,55 +201,8 @@ export default function AppLayout() {
                 ),
               )}
             </Breadcrumbs>
-          </Group>
-
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar size="sm" radius="xl" color="atlantis">
-                    {user?.displayName?.charAt(0).toUpperCase() ?? 'U'}
-                  </Avatar>
-                  <Text size="sm" fw={500} visibleFrom="sm">
-                    {user?.displayName ?? 'User'}
-                  </Text>
-                  <IconChevronDown size={14} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLayoutDashboard size={14} />}
-                onClick={() => navigate('/')}
-              >
-                Dashboard
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconUser size={14} />}
-                onClick={() => navigate('/profile')}
-              >
-                Profile
-              </Menu.Item>
-              {user?.role === 'instance_admin' && (
-                <Menu.Item
-                  leftSection={<IconUsers size={14} />}
-                  onClick={() => navigate('/users')}
-                >
-                  User Management
-                </Menu.Item>
-              )}
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconLogout size={14} />}
-                onClick={() => logoutMutation.mutate()}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Flex>
+          }
+        />
       </AppShell.Header>
 
       {/* Sidebar */}

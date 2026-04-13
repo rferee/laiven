@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
   Text,
   Card,
-  Skeleton,
   Alert,
   Tooltip,
   ActionIcon,
@@ -39,6 +37,9 @@ import {
 import { createRule, type CreateRuleData } from '@/api/rules';
 import RulePickerModal from '@/components/RulePickerModal';
 import SortableList from '@/components/SortableList';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
 
 interface CreateFormValues {
   name: string;
@@ -180,43 +181,25 @@ export default function DerivativeRulesPage() {
 
   return (
     <Stack gap="lg">
-      <Group gap="sm">
-        <IconTransform size={28} stroke={1.5} />
-        <Stack gap={0}>
-          <Title order={2}>Derivative Rules</Title>
-          <Text size="sm" c="dimmed">
-            Applicability rules that decide when derivative types apply.
-          </Text>
-        </Stack>
-      </Group>
+      <PageHeader
+        icon={<IconTransform size={28} stroke={1.5} />}
+        title="Derivative Rules"
+        description="Applicability rules that decide when derivative types apply."
+      />
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2].map((i) => (
-            <Skeleton key={i} height={96} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList rows={2} height={96} />
       ) : derivativeTypes.length === 0 ? (
-        <Card withBorder p="xl" radius="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconTransform size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              No derivative types defined
-            </Text>
-            <Text c="dimmed" size="sm" ta="center" maw={440}>
-              Create derivative types from the Configuration section before you
-              can attach applicability rules.
-            </Text>
-            <Button
-              variant="light"
-              leftSection={<IconPlus size={16} />}
-              onClick={() => navigate(`/projects/${projectId}/derivative-types`)}
-              mt="sm"
-            >
-              Go to Derivative Types
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconTransform size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="No derivative types defined"
+          description="Create derivative types from the Configuration section before you can attach applicability rules."
+          action={{
+            label: 'Go to Derivative Types',
+            icon: <IconPlus size={16} />,
+            onClick: () => navigate(`/projects/${projectId}/derivative-types`),
+          }}
+        />
       ) : (
         <Accordion variant="separated" radius="md" multiple defaultValue={defaultAccordion}>
           {derivativeTypes.map((dt) => {

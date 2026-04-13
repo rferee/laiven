@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Container,
-  Title,
   Text,
   SimpleGrid,
   Card,
@@ -15,11 +14,7 @@ import {
   Textarea,
   Stack,
   Skeleton,
-  Menu,
-  Avatar,
-  UnstyledButton,
   Box,
-  Flex,
   Divider,
   ActionIcon,
 } from '@mantine/core';
@@ -27,10 +22,6 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
   IconPlus,
-  IconChevronDown,
-  IconUser,
-  IconUsers,
-  IconLogout,
   IconLanguage,
   IconArrowRight,
   IconLayoutDashboard,
@@ -38,8 +29,10 @@ import {
 import { getProjects, createProject, type CreateProjectData } from '@/api/projects';
 import { searchWords } from '@/api/words';
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@/hooks/useLogout';
 import { formatRelative } from '@/utils/format';
+import PageHeader from '@/components/PageHeader';
+import TopBar from '@/components/TopBar';
+import EmptyStateCard from '@/components/EmptyStateCard';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -87,8 +80,6 @@ export default function DashboardPage() {
     },
   });
 
-  const logoutMutation = useLogout();
-
   const createForm = useForm<CreateProjectData>({
     initialValues: {
       name: '',
@@ -104,93 +95,27 @@ export default function DashboardPage() {
 
   return (
     <Box mih="100vh" bg="var(--mantine-color-body)">
-      {/* Header */}
-      <Box
-        component="header"
-        py="sm"
-        px="lg"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
-      >
-        <Flex justify="space-between" align="center">
-          <Group gap="xs">
-            <IconLanguage size={22} stroke={1.5} color="var(--mantine-color-atlantis-5)" />
-            <Title order={4} fw={700}>
-              Laiven
-            </Title>
-          </Group>
-
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar size="sm" radius="xl" color="atlantis">
-                    {user?.displayName?.charAt(0).toUpperCase() ?? 'U'}
-                  </Avatar>
-                  <Text size="sm" fw={500}>
-                    {user?.displayName ?? 'User'}
-                  </Text>
-                  <IconChevronDown size={14} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLayoutDashboard size={14} />}
-                onClick={() => navigate('/')}
-              >
-                Dashboard
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconUser size={14} />}
-                onClick={() => navigate('/profile')}
-              >
-                Profile
-              </Menu.Item>
-              {user?.role === 'instance_admin' && (
-                <Menu.Item
-                  leftSection={<IconUsers size={14} />}
-                  onClick={() => navigate('/users')}
-                >
-                  User Management
-                </Menu.Item>
-              )}
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconLogout size={14} />}
-                onClick={() => logoutMutation.mutate()}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Flex>
-      </Box>
+      <TopBar />
 
       {/* Main content */}
       <Container size="lg" py="xl">
         <Stack gap="lg">
-          <Group justify="space-between" align="center">
-            <Group gap="sm">
-              <IconLayoutDashboard size={28} stroke={1.5} />
-              <Title order={2}>Projects</Title>
-            </Group>
-            {isAdmin && (
-              <Button
-                size="sm"
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setCreateModalOpen(true)}
-              >
-                Create Project
-              </Button>
-            )}
-          </Group>
-          <Text c="dimmed" size="sm">
-            Select a language project to work on.
-          </Text>
+          <PageHeader
+            icon={<IconLayoutDashboard size={28} stroke={1.5} />}
+            title="Projects"
+            description="Select a language project to work on."
+            actions={
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  leftSection={<IconPlus size={16} />}
+                  onClick={() => setCreateModalOpen(true)}
+                >
+                  Create Project
+                </Button>
+              ) : undefined
+            }
+          />
 
           {isLoading ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
@@ -199,28 +124,24 @@ export default function DashboardPage() {
               ))}
             </SimpleGrid>
           ) : projects.length === 0 ? (
-            <Card withBorder radius="md" padding="md">
-              <Stack align="center" gap="sm" py="lg">
-                <IconLanguage size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-                <Text c="dimmed" size="lg" fw={500}>
-                  No projects yet
-                </Text>
-                <Text c="dimmed" size="sm" ta="center">
-                  {isAdmin
-                    ? 'Create your first language project to get started.'
-                    : 'Contact an administrator to get access to a project.'}
-                </Text>
-                {isAdmin && (
-                  <Button
-                    variant="light"
-                    leftSection={<IconPlus size={16} />}
-                    onClick={() => setCreateModalOpen(true)}
-                  >
-                    Create your first project
-                  </Button>
-                )}
-              </Stack>
-            </Card>
+            <EmptyStateCard
+              icon={<IconLanguage size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+              title="No projects yet"
+              description={
+                isAdmin
+                  ? 'Create your first language project to get started.'
+                  : 'Contact an administrator to get access to a project.'
+              }
+              action={
+                isAdmin
+                  ? {
+                      label: 'Create your first project',
+                      icon: <IconPlus size={16} />,
+                      onClick: () => setCreateModalOpen(true),
+                    }
+                  : undefined
+              }
+            />
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
               {projects.map((project, index) => {

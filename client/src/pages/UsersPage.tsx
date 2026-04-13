@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Anchor,
-  Avatar,
   Box,
   Container,
-  Flex,
-  Menu,
   Title,
   Text,
   Button,
@@ -22,8 +19,6 @@ import {
   Alert,
   Card,
   Tooltip,
-  Skeleton,
-  UnstyledButton,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,20 +28,17 @@ import {
   IconTrash,
   IconAlertCircle,
   IconUsers,
-  IconLanguage,
-  IconChevronDown,
-  IconLogout,
-  IconLayoutDashboard,
-  IconUser,
   IconArrowLeft,
 } from '@tabler/icons-react';
 import { getUsers, createUser, updateUser, deleteUser } from '@/api/users';
-import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@/hooks/useLogout';
 import type { UserRecord, CreateUserData, UpdateUserData } from '@/api/users';
 import { formatDate } from '@/utils/format';
 import { validateEmail, validatePassword } from '@/utils/validation';
 import { getApiErrorMessage } from '@/utils/errors';
+import TopBar from '@/components/TopBar';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import LoadErrorAlert from '@/components/LoadErrorAlert';
 
 function CreateUserModal({
   opened,
@@ -381,80 +373,21 @@ function DeleteUserModal({
 
 export default function UsersPage() {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: getUsers,
   });
-
-  const logoutMutation = useLogout();
 
   const users = data?.items || [];
 
   return (
     <Box mih="100vh" bg="var(--mantine-color-body)">
-      {/* Header — mirrors DashboardPage / ProfilePage */}
-      <Box
-        component="header"
-        py="sm"
-        px="lg"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
-      >
-        <Flex justify="space-between" align="center">
-          <Group gap="xs">
-            <IconLanguage size={28} stroke={1.5} color="var(--mantine-color-atlantis-5)" />
-            <Title order={3} fw={700}>
-              Laiven
-            </Title>
-          </Group>
-
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar size="sm" radius="xl" color="atlantis">
-                    {currentUser?.displayName?.charAt(0).toUpperCase() ?? 'U'}
-                  </Avatar>
-                  <Text size="sm" fw={500}>
-                    {currentUser?.displayName ?? 'User'}
-                  </Text>
-                  <IconChevronDown size={14} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLayoutDashboard size={14} />}
-                onClick={() => navigate('/')}
-              >
-                Dashboard
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconUser size={14} />}
-                onClick={() => navigate('/profile')}
-              >
-                Profile
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconLogout size={14} />}
-                onClick={() => logoutMutation.mutate()}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Flex>
-      </Box>
+      <TopBar />
 
       {/* Main content */}
       <Container size="lg" py="xl">
@@ -489,34 +422,24 @@ export default function UsersPage() {
           </Text>
 
           {isLoading ? (
-            <Stack gap="sm">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} height={52} radius="md" />
-              ))}
-            </Stack>
+            <SkeletonList height={52} />
           ) : error ? (
-            <Alert icon={<IconAlertCircle size={18} />} color="red" variant="light">
-              Failed to load users. Make sure you have administrator permissions.
-            </Alert>
+            <LoadErrorAlert
+              error={error}
+              fallback="Failed to load users. Make sure you have administrator permissions."
+              onRetry={() => refetch()}
+            />
           ) : users.length === 0 ? (
-            <Card withBorder radius="md" padding="md">
-              <Stack align="center" gap="sm" py="lg">
-                <IconUsers size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-                <Text c="dimmed" size="lg" fw={500}>
-                  No users found
-                </Text>
-                <Text c="dimmed" size="sm">
-                  Create your first user to get started.
-                </Text>
-                <Button
-                  variant="light"
-                  leftSection={<IconPlus size={16} />}
-                  onClick={() => setCreateModalOpen(true)}
-                >
-                  Create user
-                </Button>
-              </Stack>
-            </Card>
+            <EmptyStateCard
+              icon={<IconUsers size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+              title="No users found"
+              description="Create your first user to get started."
+              action={{
+                label: 'Create user',
+                icon: <IconPlus size={16} />,
+                onClick: () => setCreateModalOpen(true),
+              }}
+            />
           ) : (
             <Card withBorder radius="md" p={0}>
               <Table highlightOnHover>

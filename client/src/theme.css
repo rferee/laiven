@@ -217,3 +217,11 @@ body {
   border-radius: 0 !important;
 }
 
+/* ── Pill: square (TagsInput, PillsInput, MultiSelect) ────────────── */
+.mantine-Pill-root {
+  border-radius: 0 !important;
+}
+.mantine-PillsInput-input {
+  border-radius: 0 !important;
+}
+

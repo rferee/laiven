@@ -1,23 +1,18 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
   Text,
   Badge,
-  Card,
   TextInput,
   Textarea,
   Select,
   Switch,
   Modal,
-  ActionIcon,
-  Skeleton,
   Alert,
   TagsInput,
-  Tooltip,
   SegmentedControl,
   Input,
 } from '@mantine/core';
@@ -26,12 +21,15 @@ import { useDisclosure } from '@mantine/hooks';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   IconPlus,
-  IconTrash,
   IconAlertCircle,
-  IconGripVertical,
   IconListDetails,
 } from '@tabler/icons-react';
 import SortableList from '@/components/SortableList';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import ExpandableCrudRow from '@/components/ExpandableCrudRow';
 import {
   getAttributes,
   createAttribute,
@@ -220,175 +218,143 @@ export default function AttributesPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconListDetails size={28} stroke={1.5} />
-          <Title order={2}>Attributes</Title>
-        </Group>
-        <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Add Attribute
-        </Button>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Define the fields that each word in your language will have.
-      </Text>
+      <PageHeader
+        icon={<IconListDetails size={28} stroke={1.5} />}
+        title="Attributes"
+        description="Define the fields that each word in your language will have."
+        actions={
+          <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            Add Attribute
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={72} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={72} />
       ) : attributes.length === 0 ? (
-        <Card withBorder radius="md" padding="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconListDetails size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              No attributes defined yet
-            </Text>
-            <Text c="dimmed" size="sm">
-              Attributes define the fields that each word in your language will have.
-            </Text>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-              Create your first attribute
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconListDetails size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="No attributes defined yet"
+          description="Attributes define the fields that each word in your language will have."
+          action={{
+            label: 'Create your first attribute',
+            icon: <IconPlus size={16} />,
+            onClick: openCreate,
+          }}
+        />
       ) : (
         <Stack gap="xs">
           <SortableList
             items={attributes}
             onReorder={handleReorder}
-            renderItem={(attr, _isDragging, dragHandleProps) => (
-              <Card
-                withBorder
-                radius="md"
-                padding="sm"
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleExpand(attr)}
-              >
-                <Group justify="space-between" wrap="nowrap">
-                  <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-                    <ActionIcon
-                      variant="subtle"
-                      size="sm"
-                      color="gray"
-                      ref={dragHandleProps.ref}
-                      {...dragHandleProps.attributes}
-                      {...dragHandleProps.listeners}
-                      style={dragHandleProps.style}
-                    >
-                      <IconGripVertical size={18} />
-                    </ActionIcon>
-                    <Text fw={500} truncate style={{ minWidth: 0 }}>
-                      {attr.name}
-                    </Text>
-                    <Badge size="sm" variant="light" color={TYPE_COLORS[attr.type] ?? 'gray'}>
-                      {AttributeTypeLabel(attr.type)}
-                    </Badge>
-                    {attr.uniqueMode && attr.uniqueMode !== 'off' && (
-                      <Badge size="sm" variant="light" color="blue">
-                        {attr.uniqueMode === 'case_insensitive' ? 'Unique (CI)' : 'Unique'}
-                      </Badge>
-                    )}
-                    {attr.description && (
+            renderItem={(attr, _isDragging, dragHandleProps) => {
+              const badges: { label: string; color?: string }[] = [
+                { label: AttributeTypeLabel(attr.type), color: TYPE_COLORS[attr.type] ?? 'gray' },
+              ];
+              if (attr.uniqueMode && attr.uniqueMode !== 'off') {
+                badges.push({
+                  label: attr.uniqueMode === 'case_insensitive' ? 'Unique (CI)' : 'Unique',
+                  color: 'blue',
+                });
+              }
+              return (
+                <ExpandableCrudRow
+                  title={attr.name}
+                  badges={badges}
+                  meta={
+                    attr.description ? (
                       <Text c="dimmed" size="xs" truncate style={{ minWidth: 0 }}>
                         {attr.description}
                       </Text>
-                    )}
-                  </Group>
-                  <Group gap={4} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
-                    {attr.required && (
+                    ) : undefined
+                  }
+                  rightSlot={
+                    attr.required ? (
                       <Badge size="sm" variant="dot" color="red">
                         Required
                       </Badge>
-                    )}
-                    <Tooltip label="Delete">
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        color="red"
-                        onClick={() => setDeleteTarget(attr)}
-                      >
-                        <IconTrash size={14} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Group>
-
-                {expandedId === attr.id && (
-                  <form
-                    onSubmit={editForm.onSubmit((values) => handleEdit(attr.id, values))}
-                    style={{ marginTop: 12 }}
-                  >
-                    <Stack gap="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-                      <Group grow align="flex-end">
-                        <TextInput
-                          label="Name"
-                          placeholder="Attribute name"
-                          {...editForm.getInputProps('name')}
-                        />
-                        <Select
-                          label="Type"
-                          data={ATTRIBUTE_TYPES}
-                          {...editForm.getInputProps('type')}
-                        />
-                        <Switch
-                          label="Required"
-                          checked={editForm.values.required}
-                          onChange={(e) => editForm.setFieldValue('required', e.currentTarget.checked)}
-                          style={{ flexGrow: 0, flexShrink: 0 }}
-                        />
-                      </Group>
-                      <Input.Wrapper
-                        label="Unique"
-                        description="If set, only one word in this project can have this attribute value."
-                      >
-                        <SegmentedControl
-                          fullWidth
-                          mt={4}
-                          data={UNIQUE_MODE_OPTIONS}
-                          value={editForm.values.uniqueMode}
-                          onChange={(val) => editForm.setFieldValue('uniqueMode', val as UniqueMode)}
-                        />
-                      </Input.Wrapper>
-                      <Textarea
-                        label="Description"
-                        placeholder="Optional description"
-                        autosize
-                        minRows={2}
-                        {...editForm.getInputProps('description')}
-                      />
-                      {editForm.values.type === 'one-of' && (
-                        <TagsInput
-                          label="Options"
-                          placeholder="Type an option and press Enter"
-                          value={editForm.values.options}
-                          onChange={(val) => editForm.setFieldValue('options', val)}
-                        />
-                      )}
-                      <Group justify="flex-end" gap="sm">
-                        <Button variant="default" size="xs" onClick={() => setExpandedId(null)}>
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          size="xs"
-                          loading={updateMutation.isPending}
+                    ) : undefined
+                  }
+                  expanded={expandedId === attr.id}
+                  onToggle={() => handleExpand(attr)}
+                  onDelete={() => setDeleteTarget(attr)}
+                  dragHandle={dragHandleProps}
+                  deleteAriaLabel="Delete attribute"
+                  expandedContent={
+                    <form
+                      onSubmit={editForm.onSubmit((values) => handleEdit(attr.id, values))}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <Stack gap="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+                        <Group grow align="flex-end">
+                          <TextInput
+                            label="Name"
+                            placeholder="Attribute name"
+                            {...editForm.getInputProps('name')}
+                          />
+                          <Select
+                            label="Type"
+                            data={ATTRIBUTE_TYPES}
+                            {...editForm.getInputProps('type')}
+                          />
+                          <Switch
+                            label="Required"
+                            checked={editForm.values.required}
+                            onChange={(e) => editForm.setFieldValue('required', e.currentTarget.checked)}
+                            style={{ flexGrow: 0, flexShrink: 0 }}
+                          />
+                        </Group>
+                        <Input.Wrapper
+                          label="Unique"
+                          description="If set, only one word in this project can have this attribute value."
                         >
-                          Save Changes
-                        </Button>
-                      </Group>
-                      {updateMutation.isError && (
-                        <Alert color="red" variant="light">
-                          {(updateMutation.error as Error).message}
-                        </Alert>
-                      )}
-                    </Stack>
-                  </form>
-                )}
-              </Card>
-            )}
+                          <SegmentedControl
+                            fullWidth
+                            mt={4}
+                            data={UNIQUE_MODE_OPTIONS}
+                            value={editForm.values.uniqueMode}
+                            onChange={(val) => editForm.setFieldValue('uniqueMode', val as UniqueMode)}
+                          />
+                        </Input.Wrapper>
+                        <Textarea
+                          label="Description"
+                          placeholder="Optional description"
+                          autosize
+                          minRows={2}
+                          {...editForm.getInputProps('description')}
+                        />
+                        {editForm.values.type === 'one-of' && (
+                          <TagsInput
+                            label="Options"
+                            placeholder="Type an option and press Enter"
+                            value={editForm.values.options}
+                            onChange={(val) => editForm.setFieldValue('options', val)}
+                          />
+                        )}
+                        <Group justify="flex-end" gap="sm">
+                          <Button variant="default" size="xs" onClick={() => setExpandedId(null)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="xs"
+                            loading={updateMutation.isPending}
+                          >
+                            Save Changes
+                          </Button>
+                        </Group>
+                        {updateMutation.isError && (
+                          <Alert color="red" variant="light">
+                            {(updateMutation.error as Error).message}
+                          </Alert>
+                        )}
+                      </Stack>
+                    </form>
+                  }
+                />
+              );
+            }}
           />
         </Stack>
       )}
@@ -479,43 +445,19 @@ export default function AttributesPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        opened={!!deleteTarget}
+      <DeleteConfirmModal
+        target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete Attribute"
-        size="sm"
-      >
-        <Stack gap="md">
-          <Text>
-            Are you sure you want to delete{' '}
-            <Text span fw={600}>
-              {deleteTarget?.name}
-            </Text>
-            ?
-          </Text>
-          <Alert color="sunset" variant="light" icon={<IconAlertCircle size={16} />}>
+        entityLabel="Attribute"
+        warning={
+          <Text size="sm">
             This may affect rules and builders that reference this attribute, and all
             values of this attribute on existing words will be lost.
-          </Alert>
-          {deleteMutation.isError && (
-            <Alert color="red" variant="light">
-              {(deleteMutation.error as Error).message}
-            </Alert>
-          )}
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+          </Text>
+        }
+        mutation={deleteMutation}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Stack>
   );
 }

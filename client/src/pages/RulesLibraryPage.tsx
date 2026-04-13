@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
@@ -13,7 +12,6 @@ import {
   Switch,
   Modal,
   ActionIcon,
-  Skeleton,
   Alert,
   Table,
   Tooltip,
@@ -28,7 +26,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   IconPlus,
   IconTrash,
-  IconAlertCircle,
   IconRuler,
   IconSearch,
   IconCheck,
@@ -42,6 +39,12 @@ import {
   type Rule,
   type CreateRuleData,
 } from '@/api/rules';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import LoadErrorAlert from '@/components/LoadErrorAlert';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import BulkSelectionToolbar from '@/components/BulkSelectionToolbar';
 
 interface CreateFormValues {
   name: string;
@@ -170,11 +173,7 @@ export default function RulesLibraryPage() {
   };
 
   if (error) {
-    return (
-      <Alert icon={<IconAlertCircle size={18} />} color="red" title="Error loading rules">
-        {(error as Error).message}
-      </Alert>
-    );
+    return <LoadErrorAlert title="Error loading rules" error={error} />;
   }
 
   const deleteUsage = deleteDisplayTarget?.usage;
@@ -183,18 +182,16 @@ export default function RulesLibraryPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconRuler size={28} stroke={1.5} />
-          <Title order={2}>Rules Library</Title>
-        </Group>
-        <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          New Rule
-        </Button>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Reusable validation rules used by words and derivative types.
-      </Text>
+      <PageHeader
+        icon={<IconRuler size={28} stroke={1.5} />}
+        title="Rules Library"
+        description="Reusable validation rules used by words and derivative types."
+        actions={
+          <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            New Rule
+          </Button>
+        }
+      />
 
       <TextInput
         placeholder="Search rules"
@@ -203,79 +200,50 @@ export default function RulesLibraryPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
       />
 
-      {selectedCount > 0 && (
-        <Card withBorder radius="md" padding="sm" bg="var(--mantine-color-blue-light)">
-          <Group justify="space-between" wrap="wrap" gap="sm">
-            <Text size="sm" fw={500}>
-              {selectedCount} rule{selectedCount === 1 ? '' : 's'} selected
-            </Text>
-            <Group gap="xs">
-              <Button
-                size="xs"
-                variant="light"
-                color="green"
-                leftSection={<IconCheck size={14} />}
-                loading={bulkToggleMutation.isPending}
-                onClick={() =>
-                  bulkToggleMutation.mutate({
-                    ids: Array.from(selectedIds),
-                    enabled: true,
-                  })
-                }
-              >
-                Enable {selectedCount}
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                color="orange"
-                leftSection={<IconX size={14} />}
-                loading={bulkToggleMutation.isPending}
-                onClick={() =>
-                  bulkToggleMutation.mutate({
-                    ids: Array.from(selectedIds),
-                    enabled: false,
-                  })
-                }
-              >
-                Disable {selectedCount}
-              </Button>
-              <Button
-                size="xs"
-                variant="subtle"
-                color="gray"
-                onClick={() => setSelectedIds(new Set())}
-                disabled={bulkToggleMutation.isPending}
-              >
-                Clear selection
-              </Button>
-            </Group>
-          </Group>
-        </Card>
-      )}
+      <BulkSelectionToolbar
+        count={selectedCount}
+        noun="rule"
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            label: `Enable ${selectedCount}`,
+            color: 'green',
+            icon: <IconCheck size={14} />,
+            loading: bulkToggleMutation.isPending,
+            onClick: () =>
+              bulkToggleMutation.mutate({
+                ids: Array.from(selectedIds),
+                enabled: true,
+              }),
+          },
+          {
+            label: `Disable ${selectedCount}`,
+            color: 'orange',
+            icon: <IconX size={14} />,
+            loading: bulkToggleMutation.isPending,
+            onClick: () =>
+              bulkToggleMutation.mutate({
+                ids: Array.from(selectedIds),
+                enabled: false,
+              }),
+          },
+        ]}
+      />
+
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={56} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={56} />
       ) : rules.length === 0 ? (
-        <Card withBorder radius="md" padding="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconRuler size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              The rules library is empty
-            </Text>
-            <Text c="dimmed" size="sm" ta="center" maw={420}>
-              Rules are reusable node graphs that validate attribute values. Once
-              created, link them to words or to derivative types as applicability rules.
-            </Text>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-              Create your first rule
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconRuler size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="The rules library is empty"
+          description="Rules are reusable node graphs that validate attribute values. Once created, link them to words or to derivative types as applicability rules."
+          action={{
+            label: 'Create your first rule',
+            icon: <IconPlus size={16} />,
+            onClick: openCreate,
+          }}
+        />
       ) : filteredRules.length === 0 ? (
         <Card withBorder radius="md" padding="md">
           <Text c="dimmed" size="sm" ta="center" py="md">
@@ -450,21 +418,12 @@ export default function RulesLibraryPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        opened={!!deleteTarget}
+      <DeleteConfirmModal
+        target={deleteDisplayTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete rule"
-        size="md"
-      >
-        <Stack gap="md">
-          <Text>
-            Are you sure you want to delete{' '}
-            <Text span fw={700}>
-              &ldquo;{deleteDisplayTarget?.name ?? ''}&rdquo;
-            </Text>
-            ? This action cannot be undone.
-          </Text>
-          {deleteHasUsage && deleteUsage && (
+        entityLabel="Rule"
+        extraContent={
+          deleteHasUsage && deleteUsage ? (
             <>
               <Divider />
               <Alert color="sunset" variant="light" title="This rule is in use">
@@ -487,26 +446,11 @@ export default function RulesLibraryPage() {
                 </Stack>
               </Alert>
             </>
-          )}
-          {deleteMutation.isError && (
-            <Alert color="red" variant="light">
-              {(deleteMutation.error as Error).message}
-            </Alert>
-          )}
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+          ) : null
+        }
+        mutation={deleteMutation}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Stack>
   );
 }

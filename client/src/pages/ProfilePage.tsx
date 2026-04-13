@@ -14,11 +14,7 @@ import {
   Alert,
   Anchor,
   Box,
-  Flex,
   Divider,
-  UnstyledButton,
-  Menu,
-  Avatar,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -26,18 +22,14 @@ import {
   IconUser,
   IconLock,
   IconArrowLeft,
-  IconLanguage,
-  IconChevronDown,
-  IconLogout,
-  IconLayoutDashboard,
   IconAlertCircle,
 } from '@tabler/icons-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@/hooks/useLogout';
 import { updateProfile } from '@/api/auth';
 import { getApiErrorMessage } from '@/utils/errors';
 import { validatePassword, validateConfirmPassword } from '@/utils/validation';
 import ApiKeysCard from './Profile/ApiKeys/ApiKeysCard';
+import TopBar from '@/components/TopBar';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -103,67 +95,15 @@ export default function ProfilePage() {
     },
   });
 
-  const logoutMutation = useLogout();
-
   const roleLabel = user?.role === 'instance_admin' ? 'Admin' : 'User';
   const roleColor = user?.role === 'instance_admin' ? 'indigo' : 'gray';
 
   return (
     <Box mih="100vh" bg="var(--mantine-color-body)">
-      {/* Header */}
-      <Box
-        component="header"
-        py="sm"
-        px="lg"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
-      >
-        <Flex justify="space-between" align="center">
-          <Group gap="xs">
-            <IconLanguage size={28} stroke={1.5} color="var(--mantine-color-atlantis-5)" />
-            <Title order={3} fw={700}>
-              Laiven
-            </Title>
-          </Group>
-
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar size="sm" radius="xl" color="atlantis">
-                    {user?.displayName?.charAt(0).toUpperCase() ?? 'U'}
-                  </Avatar>
-                  <Text size="sm" fw={500}>
-                    {user?.displayName ?? 'User'}
-                  </Text>
-                  <IconChevronDown size={14} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLayoutDashboard size={14} />}
-                onClick={() => navigate('/')}
-              >
-                Dashboard
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconLogout size={14} />}
-                onClick={() => logoutMutation.mutate()}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Flex>
-      </Box>
+      <TopBar />
 
       {/* Main content */}
-      <Container size="sm" py="xl">
+      <Container size="lg" py="xl">
         <Stack gap="lg">
           <Anchor
             size="sm"

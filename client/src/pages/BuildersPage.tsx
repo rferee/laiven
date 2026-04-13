@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Title,
   Button,
   Group,
   Stack,
@@ -10,7 +9,6 @@ import {
   TextInput,
   Modal,
   ActionIcon,
-  Skeleton,
   Alert,
   Table,
   Tooltip,
@@ -33,6 +31,10 @@ import {
   type CreateBuilderData,
 } from '@/api/builders';
 import { formatDate } from '@/utils/format';
+import PageHeader from '@/components/PageHeader';
+import SkeletonList from '@/components/SkeletonList';
+import EmptyStateCard from '@/components/EmptyStateCard';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 
 interface CreateFormValues {
   name: string;
@@ -98,40 +100,30 @@ export default function BuildersPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center">
-        <Group gap="sm">
-          <IconTransform size={28} stroke={1.5} />
-          <Title order={2}>Builders</Title>
-        </Group>
-        <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Add Builder
-        </Button>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Node graphs that programmatically generate derivative values from word attributes.
-      </Text>
+      <PageHeader
+        icon={<IconTransform size={28} stroke={1.5} />}
+        title="Builders"
+        description="Node graphs that programmatically generate derivative values from word attributes."
+        actions={
+          <Button size="sm" leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            Add Builder
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={52} radius="md" />
-          ))}
-        </Stack>
+        <SkeletonList height={52} />
       ) : builders.length === 0 ? (
-        <Card withBorder radius="md" padding="md">
-          <Stack align="center" gap="sm" py="lg">
-            <IconTransform size={48} stroke={1} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="lg" fw={500}>
-              No builders defined yet
-            </Text>
-            <Text c="dimmed" size="sm">
-              Builders are node graphs that programmatically generate derivative values from word attributes.
-            </Text>
-            <Button variant="light" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-              Create your first builder
-            </Button>
-          </Stack>
-        </Card>
+        <EmptyStateCard
+          icon={<IconTransform size={48} stroke={1} color="var(--mantine-color-dimmed)" />}
+          title="No builders defined yet"
+          description="Builders are node graphs that programmatically generate derivative values from word attributes."
+          action={{
+            label: 'Create your first builder',
+            icon: <IconPlus size={16} />,
+            onClick: openCreate,
+          }}
+        />
       ) : (
         <Card withBorder radius="md" p={0}>
           <Table highlightOnHover>
@@ -243,42 +235,18 @@ export default function BuildersPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        opened={!!deleteTarget}
+      <DeleteConfirmModal
+        target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete Builder"
-        size="sm"
-      >
-        <Stack gap="md">
-          <Text>
-            Are you sure you want to delete{' '}
-            <Text span fw={600}>
-              {deleteTarget?.name}
-            </Text>
-            ?
-          </Text>
-          <Alert color="sunset" variant="light" icon={<IconAlertCircle size={16} />}>
+        entityLabel="Builder"
+        warning={
+          <Text size="sm">
             Derivative types referencing this builder will lose their generation logic.
-          </Alert>
-          {deleteMutation.isError && (
-            <Alert color="red" variant="light">
-              {(deleteMutation.error as Error).message}
-            </Alert>
-          )}
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+          </Text>
+        }
+        mutation={deleteMutation}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Stack>
   );
 }

@@ -188,6 +188,61 @@ describe('Cross-Cutting Concerns', () => {
       expect(body.items.length).toBeLessThanOrEqual(100);
       expect(body.items.length).toBeGreaterThan(0);
     });
+
+    it('8b. GET /words with offset=2&limit=2 returns total and non-overlapping page', async () => {
+      // Seed a dedicated project so we know exactly how many words exist.
+      const projRes = await inject(app, adminCookies, {
+        method: 'POST',
+        url: '/api/v1/projects',
+        payload: { name: uniqueName('OffsetTestProject') },
+      });
+      expect(projRes.statusCode).toBeLessThan(300);
+      const offsetProjectId = JSON.parse(projRes.body).id;
+
+      // Minimal attribute so words can be created (the createWord helper
+      // expects at least a `word` string attribute to exist).
+      await inject(app, adminCookies, {
+        method: 'POST',
+        url: `/api/v1/projects/${offsetProjectId}/attributes`,
+        payload: {
+          name: 'Word',
+          type: 'string',
+          required: true,
+        },
+      });
+
+      const n = 5;
+      for (let i = 0; i < n; i++) {
+        await createWord(app, adminCookies, offsetProjectId, {
+          word: `w${i}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        });
+      }
+
+      const firstRes = await inject(app, adminCookies, {
+        method: 'GET',
+        url: `/api/v1/projects/${offsetProjectId}/words?limit=2&offset=0`,
+      });
+      expect(firstRes.statusCode).toBe(200);
+      const firstBody = JSON.parse(firstRes.body);
+      expect(firstBody.total).toBe(n);
+      expect(firstBody.items).toHaveLength(2);
+
+      const secondRes = await inject(app, adminCookies, {
+        method: 'GET',
+        url: `/api/v1/projects/${offsetProjectId}/words?limit=2&offset=2`,
+      });
+      expect(secondRes.statusCode).toBe(200);
+      const secondBody = JSON.parse(secondRes.body);
+      expect(secondBody.total).toBe(n);
+      expect(secondBody.items).toHaveLength(2);
+
+      // No overlap between the two pages.
+      const firstIds = firstBody.items.map((i: any) => i.id);
+      const secondIds = secondBody.items.map((i: any) => i.id);
+      for (const id of secondIds) {
+        expect(firstIds).not.toContain(id);
+      }
+    });
   });
 
   describe('Empty project', () => {

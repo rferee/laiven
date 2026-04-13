@@ -27,12 +27,11 @@ export interface WordListItem {
 
 export interface WordListResponse {
   items: WordListItem[];
-  nextCursor?: string;
   total?: number;
 }
 
 export interface WordListParams {
-  cursor?: string;
+  offset?: number;
   limit?: number;
   sort?: string;
   order?: 'asc' | 'desc';
@@ -62,7 +61,7 @@ export interface SearchQuery {
   conditions?: SearchCondition[];
   logic?: 'AND' | 'OR' | 'NOT';
   sort?: { field: string; order: 'asc' | 'desc' };
-  cursor?: string;
+  offset?: number;
   limit?: number;
 }
 
