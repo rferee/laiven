@@ -1,0 +1,219 @@
+/* ── Laiven brand overrides ─────────────────────────────────────────
+ * Sits on top of Mantine's core styles. Values here must stay in sync
+ * with the createTheme() call in main.tsx.
+ * ----------------------------------------------------------------- */
+
+body {
+  background-color: #0D1014;
+  color: #D3D3D3;
+}
+
+/* Force 0-radius everywhere Mantine uses a CSS variable */
+:root,
+[data-mantine-color-scheme='dark'] {
+  --mantine-radius-default: 0px;
+  --mantine-radius-xs: 0px;
+  --mantine-radius-sm: 0px;
+  --mantine-radius-md: 0px;
+  --mantine-radius-lg: 0px;
+  --mantine-radius-xl: 0px;
+
+}
+
+/* The brand "dragon" red palette resolves its filled shade to a very dark
+ * maroon in dark mode, which makes form-error text and borders hard to
+ * read. Force the error signal to a brighter, readable red. This selector
+ * must match Mantine's own `:root[data-mantine-color-scheme='dark']` for
+ * specificity to win. */
+:root[data-mantine-color-scheme='dark'] {
+  --mantine-color-error: #ff6b6b;
+}
+
+/* ── Text ──────────────────────────────────────────────────────────── */
+.mantine-Title-root {
+  color: #F1F1F1;
+}
+
+/* ── Buttons: 3-step grey ramp ──────────────────────��───────────────
+ * Idle: #191c20 | Hover: #26282c | Active/selected: #3d4043
+ * Applies to default, subtle, and light variants so every secondary
+ * button follows the same ramp. Filled (primary) buttons are
+ * untouched — they use the Mantine color system. */
+.mantine-Button-root[data-variant='default'],
+.mantine-Button-root[data-variant='subtle'],
+.mantine-Button-root[data-variant='light'],
+.mantine-ActionIcon-root[data-variant='default'],
+.mantine-ActionIcon-root[data-variant='subtle'],
+.mantine-ActionIcon-root[data-variant='light'] {
+  background-color: #191c20;
+  border-color: #26282c;
+}
+.mantine-Button-root[data-variant='default']:hover,
+.mantine-Button-root[data-variant='subtle']:hover,
+.mantine-Button-root[data-variant='light']:hover,
+.mantine-ActionIcon-root[data-variant='default']:hover,
+.mantine-ActionIcon-root[data-variant='subtle']:hover,
+.mantine-ActionIcon-root[data-variant='light']:hover {
+  background-color: #26282c;
+}
+.mantine-Button-root[data-variant='default']:active,
+.mantine-Button-root[data-variant='subtle']:active,
+.mantine-Button-root[data-variant='light']:active,
+.mantine-ActionIcon-root[data-variant='default']:active,
+.mantine-ActionIcon-root[data-variant='subtle']:active,
+.mantine-ActionIcon-root[data-variant='light']:active {
+  background-color: #3d4043;
+}
+
+/* ── Inputs ────────────────────────────────────────────────────────── */
+.mantine-Input-input,
+.mantine-Textarea-input,
+.mantine-JsonInput-input,
+.mantine-PasswordInput-input {
+  background-color: #191c20;
+  border-color: #26282c;
+}
+.mantine-Input-input:focus,
+.mantine-Textarea-input:focus,
+.mantine-PasswordInput-input:focus {
+  border-color: #E89768;
+}
+
+/* ── AppShell chrome ──────────────────────────────────────────────── */
+.mantine-AppShell-header {
+  background-color: #0D1014;
+  border-color: #191c20;
+}
+.mantine-AppShell-navbar {
+  background-color: #12161c;
+  border-color: #191c20;
+}
+
+/* ── Cards & Paper ────────────────────────────────────────────────── */
+.mantine-Card-root,
+.mantine-Paper-root {
+  background-color: #12161c;
+}
+
+/* ── Modal overlay & content ──────────────────────────────────────── */
+.mantine-Modal-content {
+  background-color: #12161c;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────── */
+.mantine-Table-tr[data-hover]:hover > td {
+  background-color: #191c20;
+}
+
+/* ── Accordion ─────────────────────────────────────────────────────── */
+.mantine-Accordion-control:hover {
+  background-color: #191c20;
+}
+
+/* ── NavLink active state ─────────────────────────────────────────── */
+.mantine-NavLink-root[data-active] {
+  background-color: #191c20;
+}
+.mantine-NavLink-root[data-active]:hover {
+  background-color: #26282c;
+}
+
+/* ── Menu ──────────────────────────────────────────────────────────── */
+.mantine-Menu-dropdown {
+  background-color: #12161c;
+  border-color: #191c20;
+}
+.mantine-Menu-item:hover {
+  background-color: #191c20;
+}
+
+/* ── Notifications ─────────────────────────────────────────────────── */
+.mantine-Notification-root {
+  background-color: #191c20;
+  border-radius: 0 !important;
+}
+.mantine-Notification-icon {
+  border-radius: 0 !important;
+}
+
+/* ── Avatar ────────────────────────────────────────────────────────── */
+.mantine-Avatar-root {
+  border-radius: 0 !important;
+}
+.mantine-Avatar-placeholder {
+  border-radius: 0 !important;
+}
+
+/* ── Loader ────────────────────────────────────────────────────────── */
+.mantine-Loader-root {
+  border-radius: 0 !important;
+}
+
+/* ── Confirm modal (via ModalsProvider) ────────────────────────────── */
+.mantine-Modal-title {
+  font-weight: 600;
+}
+
+/* ── Skeleton ──────────────────────────────────────────────────────── */
+.mantine-Skeleton-root::before {
+  background-color: #191c20;
+}
+.mantine-Skeleton-root::after {
+  background-color: #26282c;
+}
+
+/* ── Badge: kill the pill shape ───────────────────────────────────── */
+.mantine-Badge-root {
+  border-radius: 0 !important;
+}
+
+/* ── Switch: square track and thumb ───────────────────────────────── */
+.mantine-Switch-track {
+  border-radius: 0 !important;
+}
+.mantine-Switch-thumb {
+  border-radius: 0 !important;
+}
+
+/* ── SegmentedControl: square segments ────────────────────────────── */
+.mantine-SegmentedControl-root {
+  border-radius: 0 !important;
+}
+.mantine-SegmentedControl-indicator {
+  border-radius: 0 !important;
+}
+.mantine-SegmentedControl-label {
+  border-radius: 0 !important;
+}
+
+/* ── Tooltip: square ──────────────────────────────────────────────── */
+.mantine-Tooltip-tooltip {
+  border-radius: 0 !important;
+}
+
+/* ── Alert: square ────────────────────────────────────────────────── */
+.mantine-Alert-root {
+  border-radius: 0 !important;
+}
+
+/* ── Node editor: custom node Paper overrides ─────────────────────── */
+.react-flow .react-flow__node {
+  border-radius: 0 !important;
+}
+.react-flow .react-flow__node .mantine-Paper-root {
+  border-radius: 0 !important;
+}
+
+/* ── Popover / Dropdown ───────────────────────────────────────────── */
+.mantine-Popover-dropdown {
+  border-radius: 0 !important;
+}
+
+/* ── Select / Combobox dropdown ───────────────────────────────────── */
+.mantine-Combobox-dropdown {
+  border-radius: 0 !important;
+}
+.mantine-Combobox-option {
+  border-radius: 0 !important;
+}
+

@@ -1,93 +1,230 @@
-# Laiven - Software for building conlangs
+# Laiven
 
+**Laiven** ("language" in Suvelinian, one of my conlangs) is a free API-first platform for building constructed languages, built after I got pissed a little too much by the dreaded .md file.
 
+---
 
-## Getting started
+## Overview
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **No hardcoded schema** - every word is composed of user-defined attributes. If your language doesn't have spelling you won't be bogged my the spelling field screaming that it can't be empty.
+- **Visual, zero-code approach** - all the complex stuff like rules and builder logic are handled by intuitive drag-and-drop node blocks.
+- **Rules, rules and more rules** - the user can define rules that must be satisfied for each word attribute (e.g. "Word must have a vowel") using flexible variables. Changes are validated live when creating or editing words.
+- **Builders and derivatives** - setup workflows to automatically produce variations of the words based on logic defined in node graphs. Have an exception? No problem, manually override it, cascading changes won't affect it.
+- **Versioning** - Laiven keeps full version history for all words.
+- **Multi-user support** - supports multiple users with granular access control.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Deployment
 
-## Add your files
+### Via Docker
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+The only supported way to run Laiven is by building it into a Docker container. To do that, build the `server/` and `client/` images from their respective `Dockerfile`s:
 
+```bash
+docker build -t laiven-server ./server
+docker build -t laiven-client ./client
 ```
-cd existing_repo
-git remote add origin https://gitlab.internal.rferee.dev/worldbuilding-projects/laiven.git
-git branch -M master
-git push -uf origin master
-```
 
-## Integrate with your tools
+Or use pre-built images from my GitLab instance and [docker-compose.deploy.yml](docker-compose.deploy.yml) as an example — copy it, fill in a `.env` based on [.env.example](.env.example), then run `docker compose -f docker-compose.deploy.yml up -d`.
 
-- [ ] [Set up project integrations](https://gitlab.internal.rferee.dev/worldbuilding-projects/laiven/-/settings/integrations)
+## Tech Stack
 
-## Collaborate with your team
+### Backend (`server/`)
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+- **Fastify 5** with TypeScript, auto-generated OpenAPI/Swagger docs at `/api/docs`.
+- **Drizzle ORM** on PostgreSQL 16 with `drizzle-kit push` for schema management.
+- **ioredis** with a custom session store adapter backing `@fastify/session`.
+- **bcryptjs** for password and API key hashing.
+- **@fastify/rate-limit** for per-IP throttling.
+- **Vitest** for unit and integration tests.
 
-## Test and Deploy
+### Frontend (`client/`)
 
-Use the built-in continuous integration in GitLab.
+- **Vite + React 18** with TypeScript and path aliases.
+- **Mantine v7** for the component system (forms, modals, tables, notifications, theming).
+- **@xyflow/react** (React Flow v12) for the node graph editor.
+- **@dnd-kit** for drag-and-drop reordering of attributes, variable items, word rules, and derivative rules.
+- **@tanstack/react-query** for API state management.
+- **Vitest + @testing-library/react** for component tests.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Infrastructure
 
-***
+- `docker-compose.yml` — PostgreSQL + Redis for local development.
+- `docker-compose.deploy.yml` — deployment example for production.
+- `.gitlab-ci.yml` — CI pipeline with test + build stages.
 
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+---
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Project
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Each constructed language is a project. All schemas, rules, builders, variables and words are project-scope. Users can belong to multiple projects with different permissions.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Attribute
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Attributes are the per-project schema for words. There are no built-in fields — even "the word itself" is a user-defined attribute. Supported types:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+| Type | Description |
+|---|---|
+| **String** | Free-text value |
+| **One-of** | Single selection from inline-configured options (e.g. Noun/Verb/Adjective) |
+| **Integer** | Whole number |
+| **Boolean** | True / false |
+| **Single Relation** | A link to one other word in the project |
+| **Multiple Relation** | Links to multiple other words |
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Attributes can be marked **required**, **unique** (off / case-sensitive / case-insensitive), and carry an optional description rendered as inline help. Display order is configurable via drag-and-drop.
+
+### Variable
+
+A named, reusable data container defined at the project level.
+
+- **Kind**: `Constant` (single value) or `Array` (ordered list of values).
+- **Data Type**: `String`, `One-of`, `Integer`, or `Boolean`.
+
+Example variables: Vowels (array of strings), Consonants (array of strings), Verb Suffixes (array of strings).
+
+Rule and builder graphs reference variables by name via the **Variable Reference** node. The node returns a single value for constants and an array for arrays.
+
+### Rule (reusable library)
+
+A rule is a node graph that returns pass/fail for a given word. Rules live in a **project-wide library** and are linked to consumers via explicit link tables:
+
+- **Word rules** (`word_rule_links`) — run during word validation (every word in the project). Each link has its own `required` flag and `displayOrder`: required failures block saving; optional failures show as warnings in the live validation panel.
+- **Derivative applicability rules** (`derivative_type_rule_links`) — attached to a specific derivative type, they determine whether that derivative applies to a given word. For example, "Past Tense" might only apply when `word_type = Verb`.
+
+The same rule can be linked to multiple consumers. Editing the rule's graph affects every place it's linked; the editor shows where it is used in the top right.
+
+### Builder
+
+A builder is a node graph that produces a string — the generated form of a word (derivative). Builders can reference other derivatives via dependency declarations, so you can build a past participle from an already-computed past tense.
+
+### Derivative
+
+A derivative is a derived form of a word: past tense, plural, diminutive, participle, etc. Derivative types are defined at the project level with:
+
+- **Applicability rules** (linked from the rules library, ordered) - define the rules which words will receive said derivative.
+- **Builder** (the node graph that produces the value) - the flow that will build the derivative by, for example, adding a suffix.
+- **Dependencies** (other derivative types that must compute first — with circular dependency detection)
+- **Required/optional** flag - whether or not the derivative must be present for each word.
+
+When a word is created or edited, all applicable builders run automatically. If you manually edit a derivative value, it's marked as **user-modified** (shown with an * indicator) and never overwritten by the builder again — but the builder's would-be output is shown as a suggested value.
+
+When a builder graph or derivative type configuration is updated, **cascade regeneration** automatically re-runs all affected builders across the project. This creates `cascade` version entries for each updated word, and user-modified derivatives are preserved.
+
+### Versioning
+
+Every word including attribute values and derivatives attributes is versioned. Each write creates a new version record with a full JSON snapshot, the author's display name, and a change type (`created` / `updated` / `deleted` / `cascade`). The `cascade` type is used for auto-updates triggered by builder or derivative type changes.
+
+---
+
+## Node Graph Engine
+
+Rules and builders share the same engine and the same visual editor. All node definitions live in the backend (`server/src/modules/node-engine/nodes/`) and are served to the frontend via `GET /api/v1/node-types` — adding a new node type is a single backend file change that flows through to the palette automatically.
+
+### Node categories (34 total)
+
+- **Input (4)** — Attribute Input, Derivative Input, Literal Value (String/Integer/Boolean), Variable Reference
+- **Condition (10)** — Contains One Of, Starts/Ends With One Of, Equals, Not Equals, Is Empty, Length Compare, Matches Pattern (regex), Is One Of, Attribute Equals
+- **Transform (13)** — Append, Prepend, Remove Last/First N, Replace, Replace Pattern (regex), Substring, To Uppercase/Lowercase, Concatenate, Get Last/First N, Lookup in Map
+- **Flow Control (4)** — If / Branch, Return (Rule), Return (Builder), Merge
+- **Logic (3)** — AND, OR, NOT
+
+### Editor features
+
+- Searchable, categorised palette with 2-line descriptions per node and hover tooltips
+- Draggable, zoomable, pannable canvas (React Flow)
+- Inspector panel with typed configuration fields per node (literal-type selectors, JSON map editor, attribute picker, variable picker, regex input, etc.)
+- Dedicated test mode: enter sample attribute values, run the graph, see each node light up green/red with its intermediate inputs and output rendered inline on the node
+- Executor derives the set of attributes actually read during execution and returns them in the trace, so the frontend can surface per-field inline errors
+
+---
+
+## Web UI Tour
+
+### Dashboard
+Grid of projects the user has access to, each with name, description, and quick stats.
+
+### Word Search (project home)
+- Debounced free-text search
+- "Advanced search" toggle opens a nested AND/OR/NOT query builder with type-appropriate operators per attribute
+- Results table with configurable columns, sortable headers, expandable rows for derivative values, bulk select and delete
+
+### Word Editor
+
+Two-column layout:
+- **Left**: attribute fields rendered by type, sticky save bar at the bottom
+- **Right**: sticky live validation panel (rule-by-rule pass/warn/fail with touched-attribute chips) + derivatives panel with suggested values and reset-to-auto controls
+- Version history and diff viewer at the bottom of the page.
+- Cmd/Ctrl+S saves from anywhere
+
+### Sidebar Navigation
+
+- **Words** (project home / search)
+- **Rules** — collapsible parent with three sub-pages:
+  - **Word Rules** — ordered list of rules that validate every word, drag-and-drop reorder, per-link required toggle
+  - **Derivative Rules** — accordion grouped by derivative type, per-link drag-and-drop reorder
+  - **Rules Library** — full searchable list with bulk enable/disable, usage badges showing every consumer
+- **Variables** — inline item editor per variable, kind and data type selectors
+- **Attributes** — drag-and-drop reorder, unique mode toggle, inline type selection, one-of options editor
+- **Builders** — list and edit
+- **Derivative Types** — per-type configuration with dependencies, applicability rules via a shared rule picker, and the linked builder
+- **Project Settings** — name, description, member management with role assignment, danger zone
+
+### Node Graph Editor
+Full-screen editor for any rule or builder. Palette on the left, canvas in the centre, inspector on the right, test panel overlay. When editing a rule linked to multiple consumers, a compact "used by N places" badge + popover in the header warns that changes affect everywhere the rule is linked.
+
+### Profile Page
+Users can change their display name and password.
+
+### User Management (instance admin)
+List, create, edit, deactivate users.
+
+---
+
+## REST API
+
+Every UI capability is available through the API at `/api/v1/...`. Interactive OpenAPI documentation (Swagger UI) is at `/api/docs/`.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Docker (for PostgreSQL and Redis)
+- Node.js 20+ and npm
+
+### Local development
+
+```bash
+sudo docker compose up -d
+
+cd server
+npm install
+npx drizzle-kit push --force
+npm run db:seed
+
+npm run dev        # → http://localhost:3001 (+ /api/docs)
+
+cd ../client
+npm install
+npm run dev        # → http://localhost:5173
+```
+
+The seed script populates a sample project called **"Eldarian"** with 5 attributes, 3 variables (Vowels, Consonants, Verb Suffixes), one word rule (`Word must contain a vowel`), one builder (`Past Tense Builder`), one derivative type (`Past Tense`) with its applicability rule, and 5 sample words. Initial version records are created for all seeded entities.
+
+Default credentials created by the seed:
+
+- **Email**: `admin@laiven.local`
+- **Password**: `admin123!`
+
+## Note
+
+Laiven is mainly built to work with how I work, while I do accept feature request nothing is a given.
+
+If you are interested in contributing, please contact me in advance or feel free to fork the project.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+GNU AGPL (General Affero Public License).

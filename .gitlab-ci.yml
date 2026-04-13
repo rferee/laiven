@@ -1,0 +1,92 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  IMAGE_SERVER: ${CI_REGISTRY_IMAGE}/server
+  IMAGE_CLIENT: ${CI_REGISTRY_IMAGE}/client
+
+# Shared snippet: extract version from a package.json and fail if server and
+# client disagree. Both apps share one version; drift means we'd be shipping
+# a backend and a frontend that claim different Laiven releases.
+.version_setup: &version_setup |
+  apk add --no-cache jq >/dev/null
+  SERVER_VERSION=$(jq -r .version server/package.json)
+  CLIENT_VERSION=$(jq -r .version client/package.json)
+  if [ "$SERVER_VERSION" != "$CLIENT_VERSION" ]; then
+    echo "ERROR: server/package.json version ($SERVER_VERSION) != client/package.json version ($CLIENT_VERSION)"
+    exit 1
+  fi
+  echo "Building Laiven $SERVER_VERSION"
+  export VERSION="$SERVER_VERSION"
+
+test:backend:
+  stage: test
+  image: node:20-alpine
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+      variables:
+        POSTGRES_USER: laiven
+        POSTGRES_PASSWORD: laiven_test
+        POSTGRES_DB: laiven_test
+    - name: redis:7-alpine
+      alias: redis
+  variables:
+    DATABASE_URL: postgresql://laiven:laiven_test@postgres:5432/laiven_test
+    REDIS_URL: redis://redis:6379
+    SESSION_SECRET: laiven-ci-test-session-secret-minimum-32-chars
+    NODE_ENV: test
+  script:
+    - cd server
+    - npm ci
+    - npx drizzle-kit push --force
+    - npm run db:seed
+    - npm test
+  rules:
+    - changes:
+        - server/**/*
+        - .gitlab-ci.yml
+
+test:frontend:
+  stage: test
+  image: node:20-alpine
+  script:
+    - cd client
+    - npm ci
+    - npm test
+  rules:
+    - changes:
+        - client/**/*
+        - .gitlab-ci.yml
+
+build:server:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - *version_setup
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t ${IMAGE_SERVER}:${CI_COMMIT_SHORT_SHA} -t ${IMAGE_SERVER}:${VERSION} -t ${IMAGE_SERVER}:latest ./server
+    - docker push ${IMAGE_SERVER}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${IMAGE_SERVER}:${VERSION}
+    - docker push ${IMAGE_SERVER}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+
+build:client:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - *version_setup
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t ${IMAGE_CLIENT}:${CI_COMMIT_SHORT_SHA} -t ${IMAGE_CLIENT}:${VERSION} -t ${IMAGE_CLIENT}:latest ./client
+    - docker push ${IMAGE_CLIENT}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${IMAGE_CLIENT}:${VERSION}
+    - docker push ${IMAGE_CLIENT}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
